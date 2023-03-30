@@ -1,6 +1,6 @@
-# PygameStarter
+# MarioJump
 
-A simple starter for Pygame
+A simple starter template for MarioJump project
 
 
 

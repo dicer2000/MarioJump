@@ -1,4 +1,9 @@
 
+#  /\_/\  Mario Jump
+# ( o o ) Programming Project
+#  =( )=  Spring 2023
+#   ~*~   (Cat by ChatGPT)
+
 import pygame as pg
 import sys
 from settings import *
@@ -10,7 +15,6 @@ class Game:
         self.screen = pg.display.set_mode(RES)
         self.clock = pg.time.Clock()
         self.delta_time = 1
-        self.current_frames_count = 0
         self.new_game()
 
     def load_sprite_sheet(self):
@@ -18,15 +22,17 @@ class Game:
         img_load = pg.image.load(IMG_FOLDER + "/mariosheet.gif")
         self.sprite_sheet = pg.transform.scale(img_load, (img_load.get_width()*2,img_load.get_height()*2)) # Make img 2X bigger
 
+
     def new_game(self):
         # Create a new game
+        self.load_sprite_sheet()
         self.current_image = 0
         self.movey = self.movex = 0
-        self.load_sprite_sheet()
         self.mario_pos_x = 50
         self.mario_pos_y = 100
         self.mario_x_move = 5.0
         self.mario_y_move = -10.0
+        self.mario_dir = RIGHT
         pg.time.set_timer(FLIP_IMAGE, IMG_REFRESH)
 
     def update(self):
@@ -36,26 +42,35 @@ class Game:
 
         ###### Set the states ######
         if self.mario_pos_y+MARIO_HEIGHT < GROUND_LEVEL:
-            self.mario_state = IN_AIR_R
+            self.mario_state = MARIO_IN_AIR
             self.mario_y_move += GRAVITY
             self.current_image = 0
-        elif self.mario_state == IN_AIR_R and self.mario_pos_y+MARIO_HEIGHT >= GROUND_LEVEL:
-            self.mario_state = LANDED_R
+        elif self.mario_state == MARIO_IN_AIR and self.mario_pos_y+MARIO_HEIGHT >= GROUND_LEVEL:
+            self.mario_state = MARIO_LANDED
             self.mario_x_move = 0
             self.mario_y_move = 0
-        elif self.mario_state == STOPPED_R:
+        elif self.mario_state == MARIO_STOPPED:
             self.mario_x_move = 0
             self.mario_y_move = 0
-        elif self.mario_state == LANDED_R:
-            self.mario_state = STOPPED_R
+        elif self.mario_state == MARIO_LANDED:
+            self.mario_state = MARIO_STOPPED
             self.mario_x_move = 0
             self.mario_y_move = 0
-        elif self.mario_state == JUMPING_R:
-            self.mario_y_move -= 15.0
-            self.mario_state == IN_AIR_R
+        elif self.mario_state == MARIO_JUMPING:
+            self.mario_y_move -= MARIO_WALK_JUMP_VEL
+            self.mario_state == MARIO_IN_AIR
             self.current_image = 0
-        elif self.mario_state == WALK_R:
-            self.mario_x_move = 1.2
+        elif self.mario_state == MARIO_WALK:
+            if self.mario_dir == LEFT:
+                self.mario_x_move = MARIO_WALK_SPEED * -1
+            else:
+                self.mario_x_move = MARIO_WALK_SPEED
+        elif self.mario_state == MARIO_RUN:
+            if self.mario_dir == LEFT:
+                self.mario_x_move = MARIO_RUN_SPEED * -1
+            else:
+                self.mario_x_move = MARIO_RUN_SPEED
+
         ###### End Setting states ######
 
         self.mario_pos_x += self.mario_x_move
@@ -85,7 +100,28 @@ class Game:
 
     def drawMario(self):
         # Draw Mario himself from sprites
-        pass
+        # Get all frames of current state
+        mario_current_frames = MKF[self.mario_state]
+        
+        # Get the direction of Mario frames
+        mario_direction_frames = mario_current_frames[self.mario_dir]
+
+        # Get current frame from state frames
+        '''
+        if self.current_image > len(mario_direction_frames)-1:
+            self.current_image = 0
+
+        mario_current_frame = mario_direction_frames[self.current_image]
+        '''
+        
+        mario_current_frame = mario_direction_frames[self.current_image % len(mario_direction_frames)]
+
+        # Get the current sub-sprite to show
+        start_box = (mario_current_frame[0]*MARIO_WIDTH, mario_current_frame[1]*MARIO_HEIGHT,
+        MARIO_WIDTH,MARIO_HEIGHT)
+
+        # Blit it to the screen
+        self.screen.blit(self.sprite_sheet, (self.mario_pos_x, self.mario_pos_y),start_box)
             
 
     def check_events(self):
@@ -94,22 +130,29 @@ class Game:
             if event.type == FLIP_IMAGE:
                 # Update the frame to show next
                 self.current_image += 1
-                if self.current_image == len(MKF[self.mario_state]):
-                    self.current_image = 0
+
             if event.type == pg.QUIT or (event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE):
                 pg.quit()
                 sys.exit()
             elif event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 # Jump
-                self.mario_state = JUMPING_R
-                self.current_image = 0                    
-            elif event.type == pg.KEYDOWN and event.key == pg.K_RIGHT:
-                self.mario_state = WALK_R
-                self.current_image = 0
-            elif event.type == pg.KEYUP and event.key == pg.K_RIGHT:
-                self.mario_state = STOPPED_R
-                self.current_image = 0
-
+                if self.mario_state != MARIO_IN_AIR:
+                    self.mario_state = MARIO_JUMPING
+#                    self.current_image = 0
+            elif event.type == pg.KEYDOWN and (event.key == pg.K_RIGHT or event.key == pg.K_LEFT):
+                # Set his direction
+                if event.key == pg.K_RIGHT:
+                    self.mario_dir = RIGHT
+                else:
+                    self.mario_dir = LEFT
+                # Check for Shift Key (Running)
+                shift = pg.key.get_mods()
+                if shift & pg.KMOD_LSHIFT or shift & pg.KMOD_RSHIFT:
+                    self.mario_state = MARIO_RUN
+                else:
+                    self.mario_state = MARIO_WALK
+            elif event.type == pg.KEYUP and (event.key == pg.K_RIGHT or event.key == pg.K_LEFT):
+                self.mario_state = MARIO_STOPPED
 
     def run(self):
         # Called once to manage whole game

@@ -19,8 +19,11 @@ class Game:
 
     def load_sprite_sheet(self):
         # Load the sprite sheet once for entire game.  Double its size to make playable
-        img_load = pg.image.load(IMG_FOLDER + "/mariosheet.gif")
-        self.sprite_sheet = pg.transform.scale(img_load, (img_load.get_width()*2,img_load.get_height()*2)) # Make img 2X bigger
+        try:
+            img_load = pg.image.load(IMG_FOLDER + "/mariosheet.gif")
+            self.sprite_sheet = pg.transform.scale(img_load, (img_load.get_width()*2,img_load.get_height()*2)) # Make img 2X bigger
+        except:
+            print("Could not load sprite sheet")
 
 
     def new_game(self):
